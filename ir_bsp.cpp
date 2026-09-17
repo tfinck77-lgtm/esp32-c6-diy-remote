@@ -119,44 +119,33 @@ extern "C" void ir_send_rc6(uint8_t address, uint8_t command)
 // Deshalb wird hier vor dem Senden die Bitreihenfolge gespiegelt.
 // ---------------------------------------------------------------------
 
-extern "C" void ir_send_generic(
-    uint64_t data,
-    uint16_t nbits,
-    ir_protocol_t protocol)
+extern "C" void ir_send_generic(uint64_t data,
+                                uint16_t nbits,
+                                ir_protocol_t protocol)
 {
-  // Sicherheitscheck gegen ungueltige Bitlaengen.
   if (nbits == 0 || nbits > 64) {
     return;
   }
 
-  // Arduino-IRremote-Aufzeichnung -> IRremoteESP8266-Sendedaten.
   const uint64_t correctedData = reverseBits(data, nbits);
 
   switch (protocol) {
-
     case IR_PROTO_NEC:
-      IrSender.sendNEC(
-          correctedData,
-          nbits,
-          IR_NUM_REPEATS
-      );
+      IrSender.sendNEC(correctedData, nbits, IR_NUM_REPEATS);
       break;
 
     case IR_PROTO_SONY:
-      // IRremoteESP8266 sendSony() verwendet standardmaessig
-      // kSonyMinRepeat = 2, also insgesamt drei Sendungen.
-      IrSender.sendSony(
-          correctedData,
-          nbits
-      );
+      IrSender.sendSony(correctedData, nbits);
       break;
 
     case IR_PROTO_DENON:
-  // 48 Bit Kaseikyo/Denon als bereits vollstaendiges Datenwort.
-  IrSender.sendPanasonic64(
-      correctedData,
-      nbits,
-      IR_NUM_REPEATS
+      // Kaseikyo_Denon:
+      // Arduino-IRremote liefert den kompletten Raw-Wert
+      // als 48 Bit, LSB first.
+      IrSender.sendPanasonic64(
+          data,
+          nbits,
+          IR_NUM_REPEATS
       );
       break;
   }
