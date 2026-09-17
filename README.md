@@ -12,13 +12,11 @@ Geräte: Lampe (RGB-Deckenfluter), TV, Internetradio, LED-Kerzen, Nixietube-Uhr,
 Stand pro Gerät
 
 Gerät	Status	Protokoll
-Lampe	✅ vollständig, 24 Kacheln funktionsfähig	NEC, Adresse 0xEF00
-TV	✅ gerade fertiggestellt, 42 Kacheln (Steuerkreuz, Zahlen, Streaming-Apps, Farbtasten etc.)	RC6, Adresse 0x0
-Soundbar, Bluray-Player, Internetradio, LED-Kerzen, Nixietube-Uhr	⏳ Dummy-Screens ("Befehle folgen"), IR-Codes bereits erfasst und gespeichert, aber noch nicht in UI eingebaut	Sony / Kaseikyo_Denon / NEC (je nach Gerät)
+alle Geräte, mit ausnahme der Soundbar sind in der fernbedienung vollständig enthalten. 
 
 Offene Punkte
 
-Restliche 5 Geräte-Screens analog zum TV-Screen bauen (Codes liegen bereits vor)
+ir-codes der soundbar zum funktionieren bringen
 Bildformat-Code (RC6 0xF5) noch nicht live am TV verifiziert
 Für Nixietube-Uhr ist eine geführte Prozedur für Zeit-/Datumseinstellung geplant (nicht als normale Kachel)
 Physische Tasten (Lautstärke, Steuerkreuz, Ein/Aus etc.) und die Frage Geräte- vs. Szenen-Modell sind bewusst zurückgestellt
