@@ -21,6 +21,10 @@ void ir_send_generic(uint64_t data,
                      uint16_t nbits,
                      ir_protocol_t protocol);
 
+// Rohdaten-Versand: mark/space-Sequenz in µs, 38 kHz.
+// Array muss mit einem Mark beginnen und mit einem Mark enden.
+void ir_send_raw(const uint16_t *data, uint16_t len);
+
 #ifdef __cplusplus
 }
 #endif

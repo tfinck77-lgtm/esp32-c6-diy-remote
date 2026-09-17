@@ -195,29 +195,43 @@ typedef struct {
   uint8_t     light_bg;
 } generic_tile_def_t;
 
-// --- Soundbar (Kaseikyo_Denon, jeweils 48 Bit) ---
-static const generic_tile_def_t soundbar_tiles[] = {
-  { "Ein/Aus",            LV_SYMBOL_POWER,      0x6A0832503254, 48, 0,0,0,0, 0 },
-  { "Mute",                LV_SYMBOL_MUTE,       0x3A0862503254, 48, 0,0,0,0, 0 },
-  { "TV",                  LV_SYMBOL_VIDEO,      0xCB0992503254, 48, 0,0,0,0, 0 },
-  { "HDMI",                NULL,                 0xEB09B2503254, 48, 0,0,0,0, 0 },
-  { "OPT",                 NULL,                 0x3B0962503254, 48, 0,0,0,0, 0 },
-  { "AUX",                 NULL,                 0xDA0882503254, 48, 0,0,0,0, 0 },
-  { "PURE",                NULL,                 0x180A42503254, 48, 0,0,0,0, 0 },
-  { "Bluetooth",           LV_SYMBOL_BLUETOOTH,  0x5E0C02503254, 48, 0,0,0,0, 0 },
-  { "Vol +",               LV_SYMBOL_VOLUME_MAX, 0x1A0842503254, 48, 0,0,0,0, 0 },
-  { "Vol -",                LV_SYMBOL_VOLUME_MID, 0xA0852503254, 48, 0,0,0,0, 0 },
-  { "Bass +",              LV_SYMBOL_PLUS,       0x4E0C12503254, 48, 0,0,0,0, 0 },
-  { "Bass -",              LV_SYMBOL_MINUS,      0x7E0C22503254, 48, 0,0,0,0, 0 },
-  { "Movie",               LV_SYMBOL_IMAGE,      0x680A32503254, 48, 0,0,0,0, 0 },
-  { "Music",               LV_SYMBOL_AUDIO,      0x80A52503254,  48, 0,0,0,0, 0 },
-  { "Night",               NULL,                 0x880AD2503254, 48, 0,0,0,0, 0 },
-  { "Dialog\nLow",        NULL,                 0x6E0C32503254, 48, 0,0,0,0, 0 },
-  { "Dialog\nMed",        NULL,                 0x1E0C42503254, 48, 0,0,0,0, 0 },
-  { "Dialog\nHigh",       NULL,                 0xE0C52503254,  48, 0,0,0,0, 0 },
-};
-#define SOUNDBAR_TILE_COUNT (sizeof(soundbar_tiles) / sizeof(soundbar_tiles[0]))
+// --- Soundbar (Denon/Kaseikyo, Rohdaten in µs, 38 kHz) ---
 
+typedef struct {
+  const char *caption;
+  const char *icon;
+  const uint16_t *raw_data;
+  uint16_t raw_len;
+  uint8_t is_color;
+  uint8_t r, g, b;
+  uint8_t light_bg;
+} denon_raw_tile_def_t;
+
+static const uint16_t denon_power_raw[] = {
+  3500, 1750,
+  400, 400, 450, 450, 350, 1300, 450, 450,
+  400, 1250, 450, 450, 400, 1200, 450, 450,
+  400, 450, 400, 1250, 450, 450, 400, 450,
+  400, 1300, 400, 1250, 400, 450, 400, 450,
+  400, 450, 450, 400, 400, 450, 450, 450,
+  400, 1200, 450, 450, 400, 1250, 450, 450,
+  400, 400, 450, 1250, 450, 400, 450, 450,
+  400, 1250, 400, 1250, 450, 450, 400, 400,
+  450, 400, 450, 450, 400, 450, 400, 1250,
+  450, 400, 400, 500, 400, 400, 450, 450,
+  400, 450, 400, 1250, 450, 450, 400, 1250,
+  400, 450, 400, 1300, 400, 1300, 400, 400,
+  400
+};
+
+static const denon_raw_tile_def_t soundbar_raw_tiles[] = {
+  { "Ein/Aus", LV_SYMBOL_POWER, denon_power_raw,
+    sizeof(denon_power_raw) / sizeof(denon_power_raw[0]),
+    0, 0, 0, 0, 0 },
+};
+
+#define SOUNDBAR_RAW_TILE_COUNT \
+  (sizeof(soundbar_raw_tiles) / sizeof(soundbar_raw_tiles[0]))
 // --- Bluray-Player (Sony; Vol +/-/Mute nutzen die TV-Lautstaerke des
 // Players mit 12 Bit, der Rest 20 Bit). Die im Original als "bei mir
 // funktionslos" markierten TV-Tasten (TV Input, TV Ein/Aus) sind
@@ -794,10 +808,95 @@ static void ui_show_nixie_remote(void)
                           NIXIE_TILE_COUNT, IR_PROTO_NEC);
 }
 
+static void soundbar_raw_event_cb(lv_event_t *e)
+{
+  uint32_t index = (uint32_t)(uintptr_t)lv_event_get_user_data(e);
+  lv_obj_t *tile = lv_event_get_target(e);
+
+  ir_send_raw(soundbar_raw_tiles[index].raw_data,
+              soundbar_raw_tiles[index].raw_len);
+
+  lv_obj_add_state(tile, LV_STATE_USER_1);
+  lv_timer_t *flash_timer = lv_timer_create(confirm_flash_timer_cb, 150, tile);
+  lv_timer_set_repeat_count(flash_timer, 1);
+}
+
 static void ui_show_soundbar_remote(void)
 {
-  ui_show_generic_remote(DEVICE_SOUNDBAR, soundbar_tiles,
-                          SOUNDBAR_TILE_COUNT, IR_PROTO_DENON);
+  clear_screen();
+
+  lv_obj_t *back = create_header("Soundbar");
+  lv_obj_add_event_cb(back, back_event_cb, LV_EVENT_CLICKED, NULL);
+
+  lv_obj_t *scr = lv_scr_act();
+  lv_obj_t *cont = lv_obj_create(scr);
+  lv_obj_set_size(cont, SCREEN_W, SCREEN_H - HEADER_H);
+  lv_obj_set_pos(cont, 0, HEADER_H);
+  lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_border_width(cont, 0, 0);
+  lv_obj_set_style_pad_all(cont, 0, 0);
+  lv_obj_set_scroll_dir(cont, LV_DIR_ALL);
+  lv_obj_set_scrollbar_mode(cont, LV_SCROLLBAR_MODE_AUTO);
+
+  static lv_style_t style_confirm;
+  static bool style_confirm_initialized = false;
+  if (!style_confirm_initialized) {
+    lv_style_init(&style_confirm);
+    lv_style_set_bg_opa(&style_confirm, LV_OPA_60);
+    lv_style_set_border_width(&style_confirm, 3);
+    lv_style_set_border_color(&style_confirm, lv_color_white());
+    lv_style_set_border_opa(&style_confirm, LV_OPA_COVER);
+    style_confirm_initialized = true;
+  }
+
+  for (uint32_t i = 0; i < SOUNDBAR_RAW_TILE_COUNT; i++) {
+    uint32_t col = i % REMOTE_COLS;
+    uint32_t row = i / REMOTE_COLS;
+    const denon_raw_tile_def_t *t = &soundbar_raw_tiles[i];
+
+    lv_obj_t *tile = lv_obj_create(cont);
+    lv_obj_set_size(tile, TILE_W - TILE_GAP, TILE_H - TILE_GAP);
+    lv_obj_set_pos(tile, col * TILE_W + TILE_GAP / 2,
+                         row * TILE_H + TILE_GAP / 2);
+    lv_obj_set_style_radius(tile, 8, 0);
+    lv_obj_set_style_border_width(tile, 0, 0);
+    lv_obj_set_style_shadow_width(tile, 0, 0);
+    lv_obj_set_style_pad_all(tile, 0, 0);
+    lv_obj_clear_flag(tile, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(tile, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_style(tile, &style_confirm, LV_PART_MAIN | LV_STATE_USER_1);
+
+    lv_color_t text_color = t->light_bg ? lv_color_black() : lv_color_white();
+
+    if (t->is_color) {
+      lv_obj_set_style_bg_color(tile, lv_color_make(t->r, t->g, t->b), 0);
+      lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+    } else {
+      lv_obj_set_style_bg_color(tile, lv_color_make(0x30, 0x30, 0x38), 0);
+      lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+
+      if (t->icon != NULL) {
+        lv_obj_t *icon = lv_label_create(tile);
+        lv_label_set_text(icon, t->icon);
+        lv_obj_set_style_text_color(icon, text_color, 0);
+        lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 6);
+      }
+    }
+
+    lv_obj_t *label = lv_label_create(tile);
+    lv_label_set_text(label, t->caption);
+    lv_obj_set_style_text_font(label, &font_de_14, 0);
+    lv_obj_set_style_text_color(label, text_color, 0);
+    lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+    if (t->icon != NULL) {
+      lv_obj_align(label, LV_ALIGN_BOTTOM_MID, 0, -6);
+    } else {
+      lv_obj_center(label);
+    }
+
+    lv_obj_add_event_cb(tile, soundbar_raw_event_cb, LV_EVENT_CLICKED,
+                        (void *)(uintptr_t)i);
+  }
 }
 
 static void ui_show_bluray_remote(void)
