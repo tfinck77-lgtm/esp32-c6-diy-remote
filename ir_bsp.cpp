@@ -152,11 +152,11 @@ extern "C" void ir_send_generic(
       break;
 
     case IR_PROTO_DENON:
-      // 48 Bit Kaseikyo/Denon.
-      IrSender.sendDenon(
-          correctedData,
-          nbits,
-          IR_NUM_REPEATS
+  // 48 Bit Kaseikyo/Denon als bereits vollstaendiges Datenwort.
+  IrSender.sendPanasonic64(
+      correctedData,
+      nbits,
+      IR_NUM_REPEATS
       );
       break;
   }
