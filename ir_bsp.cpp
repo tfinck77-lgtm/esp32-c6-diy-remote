@@ -49,3 +49,21 @@ extern "C" void ir_send_command(uint8_t index)
     IrSender.sendNEC(necData, kNECBits, IR_NUM_REPEATS);
   }
 }
+
+// RC6 Mode 0 (Philips-TV): Rohdatenwort ist Toggle-Bit(1) + Adresse(8) +
+// Kommando(8) = 20 Bit, genau wie beim Aufzeichnen mit IRremoteESP8266
+// beobachtet (z.B. Raw-Data=0x1005C fuer Ok mit gesetztem Toggle-Bit).
+// Das Toggle-Bit kennzeichnet bei RC6 einen NEUEN Tastendruck (wechselt
+// bei jedem Druck derselben Taste) - beim Original-Sender pro Taste
+// verwaltet, hier vereinfacht global, das genuegt fuer zuverlaessigen
+// Empfang.
+extern "C" void ir_send_rc6(uint8_t address, uint8_t command)
+{
+  static bool toggle = false;
+  toggle = !toggle;
+
+  uint64_t data = ((uint64_t)(toggle ? 1 : 0) << 16) |
+                  ((uint64_t)address << 8) |
+                  (uint64_t)command;
+  IrSender.sendRC6(data, 20, IR_NUM_REPEATS);
+}
