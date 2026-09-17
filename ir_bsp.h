@@ -1,6 +1,8 @@
 #ifndef IR_BSP_H
 #define IR_BSP_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

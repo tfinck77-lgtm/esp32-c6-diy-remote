@@ -1,4 +1,5 @@
 #include "ui_remote.h"
+#include "ir_bsp.h"
 #include "lvgl.h"
 #include <stdio.h>
 
@@ -21,88 +22,6 @@ LV_FONT_DECLARE(font_de_14);
 // RGB-Lampe: 4 Spalten x 6 Zeilen = 24 Kacheln, wie auf der Original-
 // Fernbedienung. Durch den festen Kopfbereich mit Zurueck-Taste bleiben
 // fuer die Befehle 170x278 px als scrollbarer Bereich.
-// Wird in ir_bsp.cpp durch die echte Implementierung ueberschrieben.
-__attribute__((weak)) void ir_send_command(uint8_t index)
-{
-  if (index < REMOTE_TILE_COUNT) {
-    printf("[IR] Kachel gedrueckt: %s (Index %u) - IR-Code noch nicht hinterlegt\n",
-           tiles[index].name, (unsigned)index);
-  }
-}
-
-static void ui_show_device_menu(void);
-static void ui_show_lamp_remote(void);
-static void ui_show_tv_remote(void);
-static void ui_show_placeholder_remote(device_id_t device);
-
-static void clear_screen(void)
-{
-  lv_obj_t *scr = lv_scr_act();
-  lv_obj_clean(scr);
-  lv_obj_set_style_bg_color(scr, lv_color_black(), 0);
-  lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
-}
-
-static lv_obj_t *create_header(const char *title)
-{
-  lv_obj_t *scr = lv_scr_act();
-
-  lv_obj_t *header = lv_obj_create(scr);
-  lv_obj_set_size(header, SCREEN_W, HEADER_H);
-  lv_obj_align(header, LV_ALIGN_TOP_LEFT, 0, 0);
-  lv_obj_set_style_bg_color(header, lv_color_make(0x20, 0x20, 0x26), 0);
-  lv_obj_set_style_bg_opa(header, LV_OPA_COVER, 0);
-  lv_obj_set_style_border_width(header, 0, 0);
-  lv_obj_set_style_radius(header, 0, 0);
-  lv_obj_set_style_pad_all(header, 0, 0);
-  lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-
-  lv_obj_t *back = lv_btn_create(header);
-  lv_obj_set_size(back, 42, 34);
-  lv_obj_align(back, LV_ALIGN_LEFT_MID, 4, 0);
-  lv_obj_set_style_radius(back, 7, 0);
-  lv_obj_set_style_bg_color(back, lv_color_make(0x38, 0x38, 0x42), 0);
-  lv_obj_set_style_shadow_width(back, 0, 0);
-
-  lv_obj_t *back_label = lv_label_create(back);
-  lv_label_set_text(back_label, LV_SYMBOL_LEFT);
-  lv_obj_center(back_label);
-
-  lv_obj_t *title_label = lv_label_create(header);
-  lv_label_set_text(title_label, title);
-  lv_obj_set_style_text_font(title_label, &font_de_14, 0);
-  lv_obj_set_style_text_color(title_label, lv_color_white(), 0);
-  lv_obj_set_width(title_label, 116);
-  lv_obj_set_style_text_align(title_label, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_align(title_label, LV_ALIGN_RIGHT_MID, -4, 0);
-
-  return back;
-}
-
-static void back_event_cb(lv_event_t *e)
-{
-  (void)e;
-  ui_show_device_menu();
-}
-
-static void confirm_flash_timer_cb(lv_timer_t *timer)
-{
-  lv_obj_t *tile = (lv_obj_t *)timer->user_data;
-  lv_obj_clear_state(tile, LV_STATE_USER_1);
-}
-
-static void tile_event_cb(lv_event_t *e)
-{
-  uint32_t index = (uint32_t)(uintptr_t)lv_event_get_user_data(e);
-  lv_obj_t *tile = lv_event_get_target(e);
-
-  ir_send_command((uint8_t)index);
-
-  lv_obj_add_state(tile, LV_STATE_USER_1);
-  lv_timer_t *flash_timer = lv_timer_create(confirm_flash_timer_cb, 150, tile);
-  lv_timer_set_repeat_count(flash_timer, 1);
-}
-
 // ---------------------------------------------------------------------
 
 #define REMOTE_COLS 4
@@ -259,6 +178,88 @@ static const tv_tile_def_t tv_tiles[] = {
 
 #define TV_TILE_COUNT (sizeof(tv_tiles) / sizeof(tv_tiles[0]))
 
+// Wird in ir_bsp.cpp durch die echte Implementierung ueberschrieben.
+__attribute__((weak)) void ir_send_command(uint8_t index)
+{
+  if (index < REMOTE_TILE_COUNT) {
+    printf("[IR] Kachel gedrueckt: %s (Index %u) - IR-Code noch nicht hinterlegt\n",
+           tiles[index].name, (unsigned)index);
+  }
+}
+
+static void ui_show_device_menu(void);
+static void ui_show_lamp_remote(void);
+static void ui_show_tv_remote(void);
+static void ui_show_placeholder_remote(device_id_t device);
+
+static void clear_screen(void)
+{
+  lv_obj_t *scr = lv_scr_act();
+  lv_obj_clean(scr);
+  lv_obj_set_style_bg_color(scr, lv_color_black(), 0);
+  lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
+}
+
+static lv_obj_t *create_header(const char *title)
+{
+  lv_obj_t *scr = lv_scr_act();
+
+  lv_obj_t *header = lv_obj_create(scr);
+  lv_obj_set_size(header, SCREEN_W, HEADER_H);
+  lv_obj_align(header, LV_ALIGN_TOP_LEFT, 0, 0);
+  lv_obj_set_style_bg_color(header, lv_color_make(0x20, 0x20, 0x26), 0);
+  lv_obj_set_style_bg_opa(header, LV_OPA_COVER, 0);
+  lv_obj_set_style_border_width(header, 0, 0);
+  lv_obj_set_style_radius(header, 0, 0);
+  lv_obj_set_style_pad_all(header, 0, 0);
+  lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t *back = lv_btn_create(header);
+  lv_obj_set_size(back, 42, 34);
+  lv_obj_align(back, LV_ALIGN_LEFT_MID, 4, 0);
+  lv_obj_set_style_radius(back, 7, 0);
+  lv_obj_set_style_bg_color(back, lv_color_make(0x38, 0x38, 0x42), 0);
+  lv_obj_set_style_shadow_width(back, 0, 0);
+
+  lv_obj_t *back_label = lv_label_create(back);
+  lv_label_set_text(back_label, LV_SYMBOL_LEFT);
+  lv_obj_center(back_label);
+
+  lv_obj_t *title_label = lv_label_create(header);
+  lv_label_set_text(title_label, title);
+  lv_obj_set_style_text_font(title_label, &font_de_14, 0);
+  lv_obj_set_style_text_color(title_label, lv_color_white(), 0);
+  lv_obj_set_width(title_label, 116);
+  lv_obj_set_style_text_align(title_label, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_align(title_label, LV_ALIGN_RIGHT_MID, -4, 0);
+
+  return back;
+}
+
+static void back_event_cb(lv_event_t *e)
+{
+  (void)e;
+  ui_show_device_menu();
+}
+
+static void confirm_flash_timer_cb(lv_timer_t *timer)
+{
+  lv_obj_t *tile = (lv_obj_t *)timer->user_data;
+  lv_obj_clear_state(tile, LV_STATE_USER_1);
+}
+
+static void tile_event_cb(lv_event_t *e)
+{
+  uint32_t index = (uint32_t)(uintptr_t)lv_event_get_user_data(e);
+  lv_obj_t *tile = lv_event_get_target(e);
+
+  ir_send_command((uint8_t)index);
+
+  lv_obj_add_state(tile, LV_STATE_USER_1);
+  lv_timer_t *flash_timer = lv_timer_create(confirm_flash_timer_cb, 150, tile);
+  lv_timer_set_repeat_count(flash_timer, 1);
+}
+
 static void tv_tile_event_cb(lv_event_t *e)
 {
   uint32_t index = (uint32_t)(uintptr_t)lv_event_get_user_data(e);
@@ -269,84 +270,6 @@ static void tv_tile_event_cb(lv_event_t *e)
   lv_obj_add_state(tile, LV_STATE_USER_1);
   lv_timer_t *flash_timer = lv_timer_create(confirm_flash_timer_cb, 150, tile);
   lv_timer_set_repeat_count(flash_timer, 1);
-}
-
-static void ui_show_tv_remote(void)
-{
-  clear_screen();
-
-  lv_obj_t *back = create_header("TV");
-  lv_obj_add_event_cb(back, back_event_cb, LV_EVENT_CLICKED, NULL);
-
-  lv_obj_t *scr = lv_scr_act();
-  lv_obj_t *cont = lv_obj_create(scr);
-  lv_obj_set_size(cont, SCREEN_W, SCREEN_H - HEADER_H);
-  lv_obj_set_pos(cont, 0, HEADER_H);
-  lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
-  lv_obj_set_style_border_width(cont, 0, 0);
-  lv_obj_set_style_pad_all(cont, 0, 0);
-  lv_obj_set_scroll_dir(cont, LV_DIR_ALL);
-  lv_obj_set_scrollbar_mode(cont, LV_SCROLLBAR_MODE_AUTO);
-
-  static lv_style_t style_confirm;
-  static bool style_confirm_initialized = false;
-  if (!style_confirm_initialized) {
-    lv_style_init(&style_confirm);
-    lv_style_set_bg_opa(&style_confirm, LV_OPA_60);
-    lv_style_set_border_width(&style_confirm, 3);
-    lv_style_set_border_color(&style_confirm, lv_color_white());
-    lv_style_set_border_opa(&style_confirm, LV_OPA_COVER);
-    style_confirm_initialized = true;
-  }
-
-  for (uint32_t i = 0; i < TV_TILE_COUNT; i++) {
-    uint32_t col = i % REMOTE_COLS;
-    uint32_t row = i / REMOTE_COLS;
-    const tv_tile_def_t *t = &tv_tiles[i];
-
-    lv_obj_t *tile = lv_obj_create(cont);
-    lv_obj_set_size(tile, TILE_W - TILE_GAP, TILE_H - TILE_GAP);
-    lv_obj_set_pos(tile, col * TILE_W + TILE_GAP / 2,
-                         row * TILE_H + TILE_GAP / 2);
-    lv_obj_set_style_radius(tile, 8, 0);
-    lv_obj_set_style_border_width(tile, 0, 0);
-    lv_obj_set_style_shadow_width(tile, 0, 0);
-    lv_obj_set_style_pad_all(tile, 0, 0);
-    lv_obj_clear_flag(tile, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(tile, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_style(tile, &style_confirm, LV_PART_MAIN | LV_STATE_USER_1);
-
-    lv_color_t text_color = t->light_bg ? lv_color_black() : lv_color_white();
-
-    if (t->is_color) {
-      lv_obj_set_style_bg_color(tile, lv_color_make(t->r, t->g, t->b), 0);
-      lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
-    } else {
-      lv_obj_set_style_bg_color(tile, lv_color_make(0x30, 0x30, 0x38), 0);
-      lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
-
-      if (t->icon != NULL) {
-        lv_obj_t *icon = lv_label_create(tile);
-        lv_label_set_text(icon, t->icon);
-        lv_obj_set_style_text_color(icon, text_color, 0);
-        lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 6);
-      }
-    }
-
-    lv_obj_t *label = lv_label_create(tile);
-    lv_label_set_text(label, t->caption);
-    lv_obj_set_style_text_font(label, &font_de_14, 0);
-    lv_obj_set_style_text_color(label, text_color, 0);
-    lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
-    if (t->icon != NULL) {
-      lv_obj_align(label, LV_ALIGN_BOTTOM_MID, 0, -6);
-    } else {
-      lv_obj_center(label);
-    }
-
-    lv_obj_add_event_cb(tile, tv_tile_event_cb, LV_EVENT_CLICKED,
-                        (void *)(uintptr_t)i);
-  }
 }
 
 static void device_event_cb(lv_event_t *e)
@@ -477,6 +400,84 @@ static void ui_show_lamp_remote(void)
     lv_obj_align(label, LV_ALIGN_BOTTOM_MID, 0, -6);
 
     lv_obj_add_event_cb(tile, tile_event_cb, LV_EVENT_CLICKED,
+                        (void *)(uintptr_t)i);
+  }
+}
+
+static void ui_show_tv_remote(void)
+{
+  clear_screen();
+
+  lv_obj_t *back = create_header("TV");
+  lv_obj_add_event_cb(back, back_event_cb, LV_EVENT_CLICKED, NULL);
+
+  lv_obj_t *scr = lv_scr_act();
+  lv_obj_t *cont = lv_obj_create(scr);
+  lv_obj_set_size(cont, SCREEN_W, SCREEN_H - HEADER_H);
+  lv_obj_set_pos(cont, 0, HEADER_H);
+  lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_border_width(cont, 0, 0);
+  lv_obj_set_style_pad_all(cont, 0, 0);
+  lv_obj_set_scroll_dir(cont, LV_DIR_ALL);
+  lv_obj_set_scrollbar_mode(cont, LV_SCROLLBAR_MODE_AUTO);
+
+  static lv_style_t style_confirm;
+  static bool style_confirm_initialized = false;
+  if (!style_confirm_initialized) {
+    lv_style_init(&style_confirm);
+    lv_style_set_bg_opa(&style_confirm, LV_OPA_60);
+    lv_style_set_border_width(&style_confirm, 3);
+    lv_style_set_border_color(&style_confirm, lv_color_white());
+    lv_style_set_border_opa(&style_confirm, LV_OPA_COVER);
+    style_confirm_initialized = true;
+  }
+
+  for (uint32_t i = 0; i < TV_TILE_COUNT; i++) {
+    uint32_t col = i % REMOTE_COLS;
+    uint32_t row = i / REMOTE_COLS;
+    const tv_tile_def_t *t = &tv_tiles[i];
+
+    lv_obj_t *tile = lv_obj_create(cont);
+    lv_obj_set_size(tile, TILE_W - TILE_GAP, TILE_H - TILE_GAP);
+    lv_obj_set_pos(tile, col * TILE_W + TILE_GAP / 2,
+                         row * TILE_H + TILE_GAP / 2);
+    lv_obj_set_style_radius(tile, 8, 0);
+    lv_obj_set_style_border_width(tile, 0, 0);
+    lv_obj_set_style_shadow_width(tile, 0, 0);
+    lv_obj_set_style_pad_all(tile, 0, 0);
+    lv_obj_clear_flag(tile, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(tile, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_style(tile, &style_confirm, LV_PART_MAIN | LV_STATE_USER_1);
+
+    lv_color_t text_color = t->light_bg ? lv_color_black() : lv_color_white();
+
+    if (t->is_color) {
+      lv_obj_set_style_bg_color(tile, lv_color_make(t->r, t->g, t->b), 0);
+      lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+    } else {
+      lv_obj_set_style_bg_color(tile, lv_color_make(0x30, 0x30, 0x38), 0);
+      lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+
+      if (t->icon != NULL) {
+        lv_obj_t *icon = lv_label_create(tile);
+        lv_label_set_text(icon, t->icon);
+        lv_obj_set_style_text_color(icon, text_color, 0);
+        lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 6);
+      }
+    }
+
+    lv_obj_t *label = lv_label_create(tile);
+    lv_label_set_text(label, t->caption);
+    lv_obj_set_style_text_font(label, &font_de_14, 0);
+    lv_obj_set_style_text_color(label, text_color, 0);
+    lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+    if (t->icon != NULL) {
+      lv_obj_align(label, LV_ALIGN_BOTTOM_MID, 0, -6);
+    } else {
+      lv_obj_center(label);
+    }
+
+    lv_obj_add_event_cb(tile, tv_tile_event_cb, LV_EVENT_CLICKED,
                         (void *)(uintptr_t)i);
   }
 }
