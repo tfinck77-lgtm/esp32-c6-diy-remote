@@ -50,6 +50,7 @@ typedef enum {
     DEVICE_NIXIE_CLOCK,
     DEVICE_SOUNDBAR,
     DEVICE_BLURAY,
+    DEVICE_TUER_LED,
     DEVICE_COUNT
 } device_id_t;
 
@@ -65,6 +66,7 @@ static const device_def_t devices[DEVICE_COUNT] = {
     { "Nixietube-Uhr" },
     { "Soundbar" },
     { "Bluray-Player" },
+    { "Tür-LED" },
 };
 
 // Reihenfolge exakt wie auf der Original-Fernbedienung angegeben.
@@ -331,6 +333,71 @@ static const generic_tile_def_t nixie_tiles[] = {
 };
 #define NIXIE_TILE_COUNT (sizeof(nixie_tiles) / sizeof(nixie_tiles[0]))
 
+// --- Tür-LED (RGB-LED-Streifen an der Durchgangsdoppeltür, NEC,
+// Adresse 0x0, jeweils 32 Bit). ACHTUNG: dieselbe Adresse 0x0 wie die
+// Nixietube-Uhr, mit teils identischen Command-Bytes (z.B. 0x40, 0x44,
+// 0x45, 0x0C, 0x0D, 0x18, 0x19, 0x1C) - beide Geraete koennen sich bei
+// gemeinsamer Reichweite gegenseitig triggern. Codes 1:1 aus
+// IR-Codes-LED-Streifen-Durchgangstür.txt uebernommen. ---
+static const generic_tile_def_t tuer_led_tiles[] = {
+    // Reihe 1
+    { "Heller", LV_SYMBOL_PLUS, 0xA35CFF00, 32, 0,0,0,0, 0 },
+    { "Dunkler", LV_SYMBOL_MINUS, 0xA25DFF00, 32, 0,0,0,0, 0 },
+    { "Play/\nPause", LV_SYMBOL_PLAY, 0xBE41FF00, 32, 0,0,0,0, 0 },
+    { "Ein/Aus", LV_SYMBOL_POWER, 0xBF40FF00, 32, 0,0,0,0, 0 },
+    // Reihe 2 - Grundfarben
+    { "Rot", NULL, 0xA758FF00, 32, 1, 0xE0,0x10,0x10, 0 },
+    { "Grün", NULL, 0xA659FF00, 32, 1, 0x20,0xB0,0x20, 0 },
+    { "Blau", NULL, 0xBA45FF00, 32, 1, 0x10,0x30,0xB0, 0 },
+    { "Weiß", NULL, 0xBB44FF00, 32, 1, 0xFF,0xFF,0xFF, 1 },
+    // Reihe 3
+    { "Orange-Rot", NULL, 0xAB54FF00, 32, 1, 0xFF,0x40,0x20, 0 },
+    { "Grün 2", NULL, 0xAA55FF00, 32, 1, 0x20,0xA0,0x40, 0 },
+    { "Blau 2", NULL, 0xB649FF00, 32, 1, 0x20,0x40,0xD0, 0 },
+    { "Rosa", NULL, 0xB748FF00, 32, 1, 0xFF,0xB0,0xC0, 1 },
+    // Reihe 4
+    { "Orange", NULL, 0xAF50FF00, 32, 1, 0xFF,0x90,0x00, 1 },
+    { "Türkis", NULL, 0xAE51FF00, 32, 1, 0x20,0xC0,0xC0, 0 },
+    { "Bordeaux", NULL, 0xB24DFF00, 32, 1, 0x90,0x10,0x30, 0 },
+    { "Rosa 2", NULL, 0xB34CFF00, 32, 1, 0xFF,0xB0,0xC0, 1 },
+    // Reihe 5
+    { "Amber", NULL, 0xE31CFF00, 32, 1, 0xFF,0xB0,0x00, 1 },
+    { "Petrol", NULL, 0xE21DFF00, 32, 1, 0x10,0x90,0xA0, 0 },
+    { "Pink", NULL, 0xE11EFF00, 32, 1, 0xE0,0x20,0x50, 0 },
+    { "Hellcyan", NULL, 0xE01FFF00, 32, 1, 0xA0,0xE0,0xE0, 1 },
+    // Reihe 6
+    { "Gelb", NULL, 0xE718FF00, 32, 1, 0xFF,0xE0,0x00, 1 },
+    { "Dkl. Petrol", NULL, 0xE619FF00, 32, 1, 0x10,0x60,0x50, 0 },
+    { "Pink/Rot", NULL, 0xE51AFF00, 32, 1, 0xE0,0x20,0x50, 0 },
+    { "Hellcyan 2", NULL, 0xE41BFF00, 32, 1, 0xA0,0xE0,0xE0, 1 },
+    // Reihe 7 - Pfeile hoch + QUICK
+    { "Rot +", LV_SYMBOL_UP, 0xEB14FF00, 32, 0,0,0,0, 0 },
+    { "Grün +", LV_SYMBOL_UP, 0xEA15FF00, 32, 0,0,0,0, 0 },
+    { "Blau +", LV_SYMBOL_UP, 0xE916FF00, 32, 0,0,0,0, 0 },
+    { "Quick", LV_SYMBOL_SHUFFLE, 0xE817FF00, 32, 0,0,0,0, 0 },
+    // Reihe 8 - Pfeile runter + SLOW
+    { "Rot -", LV_SYMBOL_DOWN, 0xEF10FF00, 32, 0,0,0,0, 0 },
+    { "Grün -", LV_SYMBOL_DOWN, 0xEE11FF00, 32, 0,0,0,0, 0 },
+    { "Blau -", LV_SYMBOL_DOWN, 0xED12FF00, 32, 0,0,0,0, 0 },
+    { "Slow", LV_SYMBOL_LOOP, 0xEC13FF00, 32, 0,0,0,0, 0 },
+    // Reihe 9 - DIY1-3 + AUTO
+    { "DIY1", NULL, 0xF30CFF00, 32, 0,0,0,0, 0 },
+    { "DIY2", NULL, 0xF20DFF00, 32, 0,0,0,0, 0 },
+    { "DIY3", NULL, 0xF10EFF00, 32, 0,0,0,0, 0 },
+    { "Auto", NULL, 0xF00FFF00, 32, 0,0,0,0, 0 },
+    // Reihe 10 - DIY4-6 + FLASH
+    { "DIY4", NULL, 0xF708FF00, 32, 0,0,0,0, 0 },
+    { "DIY5", NULL, 0xF609FF00, 32, 0,0,0,0, 0 },
+    { "DIY6", NULL, 0xF50AFF00, 32, 0,0,0,0, 0 },
+    { "Flash", NULL, 0xF40BFF00, 32, 0,0,0,0, 0 },
+    // Reihe 11 - JUMP3, JUMP7, FADE3, FADE7
+    { "Jump3", NULL, 0xFB04FF00, 32, 0,0,0,0, 0 },
+    { "Jump7", NULL, 0xFA05FF00, 32, 0,0,0,0, 0 },
+    { "Fade3", NULL, 0xF906FF00, 32, 0,0,0,0, 0 },
+    { "Fade7", NULL, 0xF807FF00, 32, 0,0,0,0, 0 },
+};
+#define TUER_LED_TILE_COUNT (sizeof(tuer_led_tiles) / sizeof(tuer_led_tiles[0]))
+
 // Wird in ir_bsp.cpp durch die echte Implementierung ueberschrieben.
 __attribute__((weak)) void ir_send_command(uint8_t index)
 {
@@ -348,6 +415,7 @@ static void ui_show_led_candles_remote(void);
 static void ui_show_nixie_remote(void);
 static void ui_show_soundbar_remote(void);
 static void ui_show_bluray_remote(void);
+static void ui_show_tuer_led_remote(void);
 static void ui_show_placeholder_remote(device_id_t device);
 
 static void clear_screen(void)
@@ -472,6 +540,8 @@ static void device_event_cb(lv_event_t *e)
         ui_show_soundbar_remote();
     } else if (device == DEVICE_BLURAY) {
         ui_show_bluray_remote();
+    } else if (device == DEVICE_TUER_LED) {
+        ui_show_tuer_led_remote();
     } else {
         ui_show_placeholder_remote(device);
     }
@@ -866,6 +936,12 @@ static void ui_show_bluray_remote(void)
 {
     ui_show_generic_remote(DEVICE_BLURAY, bluray_tiles,
                             BLURAY_TILE_COUNT, IR_PROTO_SONY);
+}
+
+static void ui_show_tuer_led_remote(void)
+{
+    ui_show_generic_remote(DEVICE_TUER_LED, tuer_led_tiles,
+                            TUER_LED_TILE_COUNT, IR_PROTO_NEC);
 }
 
 static void ui_show_placeholder_remote(device_id_t device)
