@@ -19,6 +19,14 @@ void ir_send_command(uint8_t index);
 // wird in die jeweilige Befehlsansicht gewechselt.
 void ui_remote_create(void);
 
+// Liefert die aktuell angezeigte Geraete-ID zurueck.
+// 0xFF bedeutet "Hauptmenue" (kein Geraet gewaehlt).
+uint8_t ui_remote_get_current_device(void);
+
+// Zeigt gezielt einen Screen anhand der Geraete-ID.
+// 0xFF = Hauptmenue, sonst 0..DEVICE_COUNT-1.
+void ui_remote_show_device(uint8_t device_id);
+
 #ifdef __cplusplus
 }
 #endif

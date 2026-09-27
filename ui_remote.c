@@ -181,17 +181,10 @@ typedef struct {
 } generic_tile_def_t;
 
 // --- Soundbar (Denon DHT-S217) ---
-//
-// Alle 18 Funktionen der Original-Fernbedienung (RC-1251), neu belegt
-// über die Anlernfunktion der Soundbar mit selbst gewaehlten, kollisions-
-// freien NEC-Codes (Adresse 0x1300, siehe ir_send_soundbar_command() in
-// ir_bsp.cpp). Anlernen: Source-Taste am Geraet 3 s halten, dann mit der
-// ORIGINAL-Fernbedienung (RC-1251) die Zielfunktion antippen (z.B. "Vol+"),
-// danach mit dieser Kachel den neuen Code senden.
 typedef struct {
     const char *caption;
-    const char *icon; // NULL -> nur Text, zentriert
-    uint8_t command;  // Index fuer ir_send_soundbar_command()
+    const char *icon;
+    uint8_t command;
 } soundbar_tile_def_t;
 
 static const soundbar_tile_def_t soundbar_tiles[] = {
@@ -216,10 +209,6 @@ static const soundbar_tile_def_t soundbar_tiles[] = {
 };
 #define SOUNDBAR_TILE_COUNT (sizeof(soundbar_tiles) / sizeof(soundbar_tiles[0]))
 
-// --- Bluray-Player (Sony; Vol +/-/Mute nutzen die TV-Lautstaerke des
-// Players mit 12 Bit, der Rest 20 Bit). Die im Original als "bei mir
-// funktionslos" markierten TV-Tasten (TV Input, TV Ein/Aus) sind
-// bewusst weggelassen. ---
 static const generic_tile_def_t bluray_tiles[] = {
     { "Ein/Aus", LV_SYMBOL_POWER, 0xE2D15, 20, 0,0,0,0, 0 },
     { "Disc\nauswerfen", LV_SYMBOL_EJECT, 0xE2D16, 20, 0,0,0,0, 0 },
@@ -254,7 +243,6 @@ static const generic_tile_def_t bluray_tiles[] = {
 };
 #define BLURAY_TILE_COUNT (sizeof(bluray_tiles) / sizeof(bluray_tiles[0]))
 
-// --- Internetradio (NEC, Adresse 0xE608, jeweils 32 Bit) ---
 static const generic_tile_def_t internetradio_tiles[] = {
     { "Ein/Aus", LV_SYMBOL_POWER, 0xB847E608, 32, 0,0,0,0, 0 },
     { "Quelle", LV_SYMBOL_USB, 0xBC43E608, 32, 0,0,0,0, 0 },
@@ -290,9 +278,6 @@ static const generic_tile_def_t internetradio_tiles[] = {
 };
 #define INTERNETRADIO_TILE_COUNT (sizeof(internetradio_tiles) / sizeof(internetradio_tiles[0]))
 
-// --- LED-Kerzen (NEC, Adresse 0xB708, jeweils 32 Bit). Die
-// aufgezeichnete Dublette "lichtekette aus/ein" (identischer Code wie
-// "ein") wurde weggelassen. ---
 static const generic_tile_def_t led_candles_tiles[] = {
     { "Ein", LV_SYMBOL_POWER, 0xFF00B708, 32, 0,0,0,0, 0 },
     { "Aus", LV_SYMBOL_POWER, 0xFD02B708, 32, 0,0,0,0, 0 },
@@ -307,7 +292,6 @@ static const generic_tile_def_t led_candles_tiles[] = {
 };
 #define LED_CANDLES_TILE_COUNT (sizeof(led_candles_tiles) / sizeof(led_candles_tiles[0]))
 
-// --- Nixietube-Uhr (NEC, Adresse 0x0, jeweils 32 Bit) ---
 static const generic_tile_def_t nixie_tiles[] = {
     { "Ein/Aus", LV_SYMBOL_POWER, 0xBA45FF00, 32, 0,0,0,0, 0 },
     { "Menü", LV_SYMBOL_LIST, 0xB946FF00, 32, 0,0,0,0, 0 },
@@ -333,12 +317,6 @@ static const generic_tile_def_t nixie_tiles[] = {
 };
 #define NIXIE_TILE_COUNT (sizeof(nixie_tiles) / sizeof(nixie_tiles[0]))
 
-// --- Tür-LED (RGB-LED-Streifen an der Durchgangsdoppeltür, NEC,
-// Adresse 0x0, jeweils 32 Bit). ACHTUNG: dieselbe Adresse 0x0 wie die
-// Nixietube-Uhr, mit teils identischen Command-Bytes (z.B. 0x40, 0x44,
-// 0x45, 0x0C, 0x0D, 0x18, 0x19, 0x1C) - beide Geraete koennen sich bei
-// gemeinsamer Reichweite gegenseitig triggern. Codes 1:1 aus
-// IR-Codes-LED-Streifen-Durchgangstür.txt uebernommen. ---
 static const generic_tile_def_t tuer_led_tiles[] = {
     // Reihe 1
     { "Heller", LV_SYMBOL_PLUS, 0xA35CFF00, 32, 0,0,0,0, 0 },
@@ -417,6 +395,13 @@ static void ui_show_soundbar_remote(void);
 static void ui_show_bluray_remote(void);
 static void ui_show_tuer_led_remote(void);
 static void ui_show_placeholder_remote(device_id_t device);
+
+// Merkt sich, welches Geraet gerade angezeigt wird.
+// 0xFF = Hauptmenue / Geraeteauswahl.
+static uint8_t g_current_device = 0xFF;
+
+// Interne Weiterleitung fuer ui_remote_show_device().
+static void device_show_internal(device_id_t device);
 
 static void clear_screen(void)
 {
@@ -498,11 +483,6 @@ static void tv_tile_event_cb(lv_event_t *e)
     lv_timer_set_repeat_count(flash_timer, 1);
 }
 
-// Aktives Kachel-Array + Protokoll fuer die generischen Geraete-Menues
-// (Bluray-Player, Internetradio, LED-Kerzen, Nixietube-Uhr).
-// Wird jeweils beim Aufbau des Menues in ui_show_generic_remote() gesetzt,
-// generic_tile_event_cb() liest anhand des Kachel-Index daraus die
-// passenden IR-Daten.
 static const generic_tile_def_t *g_active_generic_tiles = NULL;
 static ir_protocol_t g_active_generic_protocol;
 
@@ -525,6 +505,8 @@ static void generic_tile_event_cb(lv_event_t *e)
 static void device_event_cb(lv_event_t *e)
 {
     device_id_t device = (device_id_t)(uintptr_t)lv_event_get_user_data(e);
+
+    g_current_device = (uint8_t)device;
 
     if (device == DEVICE_LAMP) {
         ui_show_lamp_remote();
@@ -549,6 +531,8 @@ static void device_event_cb(lv_event_t *e)
 
 static void ui_show_device_menu(void)
 {
+    g_current_device = 0xFF;
+
     clear_screen();
 
     lv_obj_t *scr = lv_scr_act();
@@ -745,10 +729,6 @@ static void ui_show_tv_remote(void)
     }
 }
 
-// Gemeinsame Render-Funktion fuer Bluray-Player/Internetradio/LED-Kerzen/
-// Nixietube-Uhr - Layout 1:1 wie ui_show_tv_remote(), nur mit
-// generic_tile_def_t (Raw-Data+Bitanzahl+Protokoll statt einzelnem
-// Kommando-Byte) und generic_tile_event_cb() als Klick-Handler.
 static void ui_show_generic_remote(device_id_t device, const generic_tile_def_t *tiles,
                                     uint32_t count, ir_protocol_t protocol)
 {
@@ -964,8 +944,53 @@ static void ui_show_placeholder_remote(device_id_t device)
     lv_obj_align(label, LV_ALIGN_CENTER, 0, 12);
 }
 
+// ---------------------------------------------------------------------
+// Interne Weiterleitung: zeigt das Geraet per ID.
+// ---------------------------------------------------------------------
+static void device_show_internal(device_id_t device)
+{
+    if (device == DEVICE_LAMP) {
+        ui_show_lamp_remote();
+    } else if (device == DEVICE_TV) {
+        ui_show_tv_remote();
+    } else if (device == DEVICE_INTERNETRADIO) {
+        ui_show_internetradio_remote();
+    } else if (device == DEVICE_LED_CANDLES) {
+        ui_show_led_candles_remote();
+    } else if (device == DEVICE_NIXIE_CLOCK) {
+        ui_show_nixie_remote();
+    } else if (device == DEVICE_SOUNDBAR) {
+        ui_show_soundbar_remote();
+    } else if (device == DEVICE_BLURAY) {
+        ui_show_bluray_remote();
+    } else if (device == DEVICE_TUER_LED) {
+        ui_show_tuer_led_remote();
+    } else {
+        ui_show_placeholder_remote(device);
+    }
+}
+
+// ---------------------------------------------------------------------
+// Oeffentliche API
+// ---------------------------------------------------------------------
+uint8_t ui_remote_get_current_device(void)
+{
+    return g_current_device;
+}
+
+void ui_remote_show_device(uint8_t device_id)
+{
+    if (device_id >= DEVICE_COUNT) {
+        g_current_device = 0xFF;
+        ui_show_device_menu();
+        return;
+    }
+
+    g_current_device = device_id;
+    device_show_internal((device_id_t)device_id);
+}
+
 void ui_remote_create(void)
 {
-    // Oberste Ebene: Beim Einschalten immer zuerst die Geraeteauswahl.
     ui_show_device_menu();
 }
