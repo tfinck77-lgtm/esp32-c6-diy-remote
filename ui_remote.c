@@ -6,6 +6,13 @@
 LV_FONT_DECLARE(font_de_14);
 
 // ---------------------------------------------------------------------
+// PNG-Icons fuer die TV-Streaming-Dienste
+// ---------------------------------------------------------------------
+LV_IMG_DECLARE(youtube);
+LV_IMG_DECLARE(netflix);
+LV_IMG_DECLARE(primevideo);
+
+// ---------------------------------------------------------------------
 // Hauptnavigation
 // ---------------------------------------------------------------------
 #define SCREEN_W 170
@@ -14,18 +21,19 @@ LV_FONT_DECLARE(font_de_14);
 
 #define DEVICE_COLS 2
 #define DEVICE_TILE_W 85
-#define DEVICE_TILE_H 80
+#define DEVICE_TILE_H 85
 #define DEVICE_TILE_GAP 3
 
 // ---------------------------------------------------------------------
 // RGB-Lampe: 4 Spalten x 6 Zeilen = 24 Kacheln, wie auf der Original-
 // Fernbedienung. Durch den festen Kopfbereich mit Zurueck-Taste bleiben
 // fuer die Befehle 170x278 px als scrollbarer Bereich.
+// Quadratische Kacheln (85x85), damit die 82x82-PNG-Icons randlos passen.
 // ---------------------------------------------------------------------
 #define REMOTE_COLS 4
 #define REMOTE_ROWS 6
 #define TILE_W 85
-#define TILE_H 80
+#define TILE_H 85
 #define TILE_GAP 3
 
 typedef enum {
@@ -106,12 +114,16 @@ static const tile_def_t tiles[REMOTE_TILE_COUNT] = {
 // ---------------------------------------------------------------------
 // TV (Philips, RC6-Protokoll, Adresse 0x0). Layout wie bei der Lampe:
 // 4 Spalten, Farbtasten mit eigenem Hintergrund, Rest mit Icon/Text.
+//
+// PNG-Icons: Wenn img_icon != NULL, wird das PNG randlos (ohne Padding)
+// angezeigt und der Text weggelassen.
 // ---------------------------------------------------------------------
 #define TV_RC6_ADDRESS 0x00
 
 typedef struct {
     const char *caption;
-    const char *icon; // NULL -> nur Text, zentriert (z.B. Zifferntasten)
+    const char *icon;                 // LVGL-Symbol (Text) oder NULL
+    const lv_img_dsc_t *img_icon;     // PNG-Icon oder NULL
     uint8_t command;
     uint8_t is_color;
     uint8_t r, g, b;
@@ -119,48 +131,48 @@ typedef struct {
 } tv_tile_def_t;
 
 static const tv_tile_def_t tv_tiles[] = {
-    { "Ein/Aus", LV_SYMBOL_POWER, 0x0C, 0,0,0,0, 0 },
-    { "Home", LV_SYMBOL_HOME, 0x54, 0,0,0,0, 0 },
-    { "Back", LV_SYMBOL_LEFT, 0x0A, 0,0,0,0, 0 },
-    { "Menü", LV_SYMBOL_LIST, 0x57, 0,0,0,0, 0 },
-    { "Sources", LV_SYMBOL_USB, 0x38, 0,0,0,0, 0 },
-    { "Ambilight", LV_SYMBOL_IMAGE, 0x8F, 0,0,0,0, 0 },
-    { "Hoch", LV_SYMBOL_UP, 0x58, 0,0,0,0, 0 },
-    { "Links", LV_SYMBOL_LEFT, 0x5A, 0,0,0,0, 0 },
-    { "Ok", LV_SYMBOL_OK, 0x5C, 0,0,0,0, 0 },
-    { "Rechts", LV_SYMBOL_RIGHT, 0x5B, 0,0,0,0, 0 },
-    { "Runter", LV_SYMBOL_DOWN, 0x59, 0,0,0,0, 0 },
-    { "Mute", LV_SYMBOL_MUTE, 0x0D, 0,0,0,0, 0 },
-    { "Vol +", LV_SYMBOL_VOLUME_MAX, 0x10, 0,0,0,0, 0 },
-    { "Vol -", LV_SYMBOL_VOLUME_MID, 0x11, 0,0,0,0, 0 },
-    { "Sender +", LV_SYMBOL_PLUS, 0x20, 0,0,0,0, 0 },
-    { "Sender -", LV_SYMBOL_MINUS, 0x21, 0,0,0,0, 0 },
-    { "Bildformat",LV_SYMBOL_EYE_OPEN, 0xF5, 0,0,0,0, 0 },
-    { "TV-Guide", LV_SYMBOL_LIST, 0xCC, 0,0,0,0, 0 },
-    { "Rewind", LV_SYMBOL_PREV, 0x2B, 0,0,0,0, 0 },
-    { "Play", LV_SYMBOL_PLAY, 0x2C, 0,0,0,0, 0 },
-    { "Pause", LV_SYMBOL_PAUSE, 0x30, 0,0,0,0, 0 },
-    { "Stop", LV_SYMBOL_STOP, 0x31, 0,0,0,0, 0 },
-    { "Forward", LV_SYMBOL_NEXT, 0x28, 0,0,0,0, 0 },
-    { "Record", LV_SYMBOL_CHARGE, 0x37, 0,0,0,0, 0 },
-    { "Rot", NULL, 0x6D, 1, 0xE0,0x10,0x10, 0 },
-    { "Grün", NULL, 0x6E, 1, 0x10,0xC0,0x20, 0 },
-    { "Gelb", NULL, 0x6F, 1, 0xFF,0xF0,0x00, 1 },
-    { "Blau", NULL, 0x70, 1, 0x20,0x40,0xFF, 0 },
-    { "Netflix", LV_SYMBOL_VIDEO, 0x76, 0,0,0,0, 0 },
-    { "YouTube", LV_SYMBOL_VIDEO, 0x79, 0,0,0,0, 0 },
-    { "Prime Video", LV_SYMBOL_VIDEO, 0xBA, 0,0,0,0, 0 },
-    { "Videotext", LV_SYMBOL_KEYBOARD, 0x3C, 0,0,0,0, 0 },
-    { "1", NULL, 0x1, 0,0,0,0, 0 },
-    { "2", NULL, 0x2, 0,0,0,0, 0 },
-    { "3", NULL, 0x3, 0,0,0,0, 0 },
-    { "4", NULL, 0x4, 0,0,0,0, 0 },
-    { "5", NULL, 0x5, 0,0,0,0, 0 },
-    { "6", NULL, 0x6, 0,0,0,0, 0 },
-    { "7", NULL, 0x7, 0,0,0,0, 0 },
-    { "8", NULL, 0x8, 0,0,0,0, 0 },
-    { "9", NULL, 0x9, 0,0,0,0, 0 },
-    { "0", NULL, 0x0, 0,0,0,0, 0 },
+    { "Ein/Aus",    LV_SYMBOL_POWER,       NULL,           0x0C, 0,0,0,0, 0 },
+    { "Home",       LV_SYMBOL_HOME,        NULL,           0x54, 0,0,0,0, 0 },
+    { "Back",       LV_SYMBOL_LEFT,        NULL,           0x0A, 0,0,0,0, 0 },
+    { "Menü",       LV_SYMBOL_LIST,        NULL,           0x57, 0,0,0,0, 0 },
+    { "Sources",    LV_SYMBOL_USB,         NULL,           0x38, 0,0,0,0, 0 },
+    { "Ambilight",  LV_SYMBOL_IMAGE,       NULL,           0x8F, 0,0,0,0, 0 },
+    { "Hoch",       LV_SYMBOL_UP,          NULL,           0x58, 0,0,0,0, 0 },
+    { "Links",      LV_SYMBOL_LEFT,        NULL,           0x5A, 0,0,0,0, 0 },
+    { "Ok",         LV_SYMBOL_OK,          NULL,           0x5C, 0,0,0,0, 0 },
+    { "Rechts",     LV_SYMBOL_RIGHT,       NULL,           0x5B, 0,0,0,0, 0 },
+    { "Runter",     LV_SYMBOL_DOWN,        NULL,           0x59, 0,0,0,0, 0 },
+    { "Mute",       LV_SYMBOL_MUTE,        NULL,           0x0D, 0,0,0,0, 0 },
+    { "Vol +",      LV_SYMBOL_VOLUME_MAX,  NULL,           0x10, 0,0,0,0, 0 },
+    { "Vol -",      LV_SYMBOL_VOLUME_MID,  NULL,           0x11, 0,0,0,0, 0 },
+    { "Sender +",   LV_SYMBOL_PLUS,        NULL,           0x20, 0,0,0,0, 0 },
+    { "Sender -",   LV_SYMBOL_MINUS,       NULL,           0x21, 0,0,0,0, 0 },
+    { "Bildformat", LV_SYMBOL_EYE_OPEN,    NULL,           0xF5, 0,0,0,0, 0 },
+    { "TV-Guide",   LV_SYMBOL_LIST,        NULL,           0xCC, 0,0,0,0, 0 },
+    { "Rewind",     LV_SYMBOL_PREV,        NULL,           0x2B, 0,0,0,0, 0 },
+    { "Play",       LV_SYMBOL_PLAY,        NULL,           0x2C, 0,0,0,0, 0 },
+    { "Pause",      LV_SYMBOL_PAUSE,       NULL,           0x30, 0,0,0,0, 0 },
+    { "Stop",       LV_SYMBOL_STOP,        NULL,           0x31, 0,0,0,0, 0 },
+    { "Forward",    LV_SYMBOL_NEXT,        NULL,           0x28, 0,0,0,0, 0 },
+    { "Record",     LV_SYMBOL_CHARGE,      NULL,           0x37, 0,0,0,0, 0 },
+    { "Rot",        NULL,                  NULL,           0x6D, 1, 0xE0,0x10,0x10, 0 },
+    { "Grün",       NULL,                  NULL,           0x6E, 1, 0x10,0xC0,0x20, 0 },
+    { "Gelb",       NULL,                  NULL,           0x6F, 1, 0xFF,0xF0,0x00, 1 },
+    { "Blau",       NULL,                  NULL,           0x70, 1, 0x20,0x40,0xFF, 0 },
+    { "Netflix",    NULL,                  &netflix,       0x76, 0,0,0,0, 0 },
+    { "YouTube",    NULL,                  &youtube,       0x79, 0,0,0,0, 0 },
+    { "Prime Video",NULL,                  &primevideo,    0xBA, 0,0,0,0, 0 },
+    { "Videotext",  LV_SYMBOL_KEYBOARD,    NULL,           0x3C, 0,0,0,0, 0 },
+    { "1",          NULL,                  NULL,           0x1, 0,0,0,0, 0 },
+    { "2",          NULL,                  NULL,           0x2, 0,0,0,0, 0 },
+    { "3",          NULL,                  NULL,           0x3, 0,0,0,0, 0 },
+    { "4",          NULL,                  NULL,           0x4, 0,0,0,0, 0 },
+    { "5",          NULL,                  NULL,           0x5, 0,0,0,0, 0 },
+    { "6",          NULL,                  NULL,           0x6, 0,0,0,0, 0 },
+    { "7",          NULL,                  NULL,           0x7, 0,0,0,0, 0 },
+    { "8",          NULL,                  NULL,           0x8, 0,0,0,0, 0 },
+    { "9",          NULL,                  NULL,           0x9, 0,0,0,0, 0 },
+    { "0",          NULL,                  NULL,           0x0, 0,0,0,0, 0 },
 };
 #define TV_TILE_COUNT (sizeof(tv_tiles) / sizeof(tv_tiles[0]))
 
@@ -691,7 +703,10 @@ static void ui_show_tv_remote(void)
         lv_obj_set_style_radius(tile, 8, 0);
         lv_obj_set_style_border_width(tile, 0, 0);
         lv_obj_set_style_shadow_width(tile, 0, 0);
+        // Wichtig: kein Innenabstand, damit das PNG-Icon bündig abschließt
         lv_obj_set_style_pad_all(tile, 0, 0);
+        lv_obj_set_style_pad_row(tile, 0, 0);
+        lv_obj_set_style_pad_column(tile, 0, 0);
         lv_obj_clear_flag(tile, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_flag(tile, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_style(tile, &style_confirm, LV_PART_MAIN | LV_STATE_USER_1);
@@ -704,24 +719,40 @@ static void ui_show_tv_remote(void)
         } else {
             lv_obj_set_style_bg_color(tile, lv_color_make(0x30, 0x30, 0x38), 0);
             lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+        }
 
+        // PNG-Icon hat Vorrang. Wenn vorhanden: randlos, kein Text.
+            // PNG-Icon hat Vorrang. Wenn vorhanden: randlos, kein Text.
+        if (t->img_icon != NULL) {
+            lv_obj_t *img = lv_img_create(tile);
+            lv_img_set_src(img, t->img_icon);
+
+            uint16_t zoom = 256;                      // 256 = kein Zoom
+            if (t->img_icon == &primevideo) zoom = 339;
+            if (t->img_icon == &netflix)    zoom = 339;
+            lv_img_set_zoom(img, zoom);
+
+            lv_obj_set_style_pad_all(img, 0, 0);
+            lv_obj_center(img);
+        } else {
+            // Klassischer Weg: LVGL-Symbol + Text
             if (t->icon != NULL) {
                 lv_obj_t *icon = lv_label_create(tile);
                 lv_label_set_text(icon, t->icon);
                 lv_obj_set_style_text_color(icon, text_color, 0);
                 lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 6);
             }
-        }
 
-        lv_obj_t *label = lv_label_create(tile);
-        lv_label_set_text(label, t->caption);
-        lv_obj_set_style_text_font(label, &font_de_14, 0);
-        lv_obj_set_style_text_color(label, text_color, 0);
-        lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
-        if (t->icon != NULL) {
-            lv_obj_align(label, LV_ALIGN_BOTTOM_MID, 0, -6);
-        } else {
-            lv_obj_center(label);
+            lv_obj_t *label = lv_label_create(tile);
+            lv_label_set_text(label, t->caption);
+            lv_obj_set_style_text_font(label, &font_de_14, 0);
+            lv_obj_set_style_text_color(label, text_color, 0);
+            lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+            if (t->icon != NULL) {
+                lv_obj_align(label, LV_ALIGN_BOTTOM_MID, 0, -6);
+            } else {
+                lv_obj_center(label);
+            }
         }
 
         lv_obj_add_event_cb(tile, tv_tile_event_cb, LV_EVENT_CLICKED,
@@ -771,6 +802,7 @@ static void ui_show_generic_remote(device_id_t device, const generic_tile_def_t 
         lv_obj_set_pos(tile, col * TILE_W + TILE_GAP / 2,
                        row * TILE_H + TILE_GAP / 2);
         lv_obj_set_style_radius(tile, 8, 0);
+        lv_obj_set_style_clip_corner(tile, true, 0);
         lv_obj_set_style_border_width(tile, 0, 0);
         lv_obj_set_style_shadow_width(tile, 0, 0);
         lv_obj_set_style_pad_all(tile, 0, 0);
